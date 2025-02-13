@@ -6,11 +6,13 @@ import (
 	"github-scanner/models"
 )
 
+const UNMARSHAL_ERROR_MSG = "error unmarshalling JSON: %v"
+
 func ParseScanResults(content string) ([]models.ScanWrapper, error) {
 	var scanWrapper []models.ScanWrapper
 	err := json.Unmarshal([]byte(content), &scanWrapper)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %v", err)
+		return nil, fmt.Errorf(UNMARSHAL_ERROR_MSG, err)
 	}
 	return scanWrapper, nil
 }

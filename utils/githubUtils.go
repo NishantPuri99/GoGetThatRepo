@@ -3,9 +3,17 @@ package utils
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 )
+
+const RESPONSE_BODY_READ_ERROR = "error reading response body: %v"
+const ATTEMPT_FAIL_MSG = "Attempt %d failed: %v\n"
+const FILE_NOT_FOUND_MSG = "file not found: %s"
+const ATTEMPT_FAIL_MSG_STATUS = "Attempt %d failed with status %d\n"
+const RETRYING_MSG = "Retrying..."
+const RETRY_FAIL_MSG = "error fetching file after 3 retries: %v"
 
 func GetRawGitHubURL(repo string, filename string) string {
 	return fmt.Sprintf("https://raw.githubusercontent.com/%s/main/%s", repo, filename)
@@ -19,25 +27,21 @@ func FetchFileContent(url string) (string, error) {
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return "", fmt.Errorf("error reading response body: %v", err)
+				return "", fmt.Errorf(RESPONSE_BODY_READ_ERROR, err)
 			}
 			return string(body), nil
 		}
 
 		if err != nil {
-			fmt.Printf("Attempt %d failed: %v\n", attempt, err)
+			fmt.Printf(ATTEMPT_FAIL_MSG, attempt, err)
 		} else {
 			if resp.StatusCode == http.StatusNotFound {
-				return "", fmt.Errorf("file not found: %s", url)
+				return "", fmt.Errorf(FILE_NOT_FOUND_MSG, url)
 			}
-			fmt.Printf("Attempt %d failed with status %d\n", attempt, resp.StatusCode)
-		}
-
-		if attempt < 3 {
-			fmt.Println("Retrying...")
+			log.Printf(ATTEMPT_FAIL_MSG_STATUS, attempt, resp.StatusCode)
 		}
 	}
-	return "", fmt.Errorf("error fetching file after 3 retries: %v", err)
+	return "", fmt.Errorf(RETRY_FAIL_MSG, err)
 }
 
 func FetchMultipleFiles(urls []string) (map[string]string, []error) {

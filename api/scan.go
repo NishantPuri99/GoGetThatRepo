@@ -39,7 +39,7 @@ func ScanRepo(context *gin.Context, database *gorm.DB) {
 	var requestData RequestData
 
 	if err := context.ShouldBindJSON(&requestData); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"Invalid Request": "Please provide a valid JSON payload in the format: { ‘repo’: ‘’, ‘files’: [’’, ‘’, …] }."})
+		context.JSON(http.StatusBadRequest, gin.H{string(utils.INVALID_REQUEST): string(utils.BAD_REQUEST_ERROR_MESSAGE)})
 		return
 	}
 
@@ -47,7 +47,7 @@ func ScanRepo(context *gin.Context, database *gorm.DB) {
 
 	for _, filename := range requestData.Files {
 		fileURL := utils.GetRawGitHubURL(requestData.Repo, filename)
-		fmt.Printf("[SCAN API] Fetching file: %s\n", fileURL)
+		log.Printf(utils.FETCH_FILE_MESSAGE, fileURL)
 		urls = append(urls, fileURL)
 	}
 
@@ -60,17 +60,17 @@ func ScanRepo(context *gin.Context, database *gorm.DB) {
 	var dbErrors []error
 	fileCount := 0
 	for url, content := range fileContents {
-		fmt.Printf("[SCAN API] Processed file from %s\n", url)
+		log.Printf(utils.PROCESSED_FILE_MESSAGE, url)
 		scanWrapper, err := utils.ParseScanResults(content)
 		if err != nil {
-			log.Printf("[SCAN API] Error Parsing file %s: %v", url, err)
+			log.Printf(utils.PARSING_ERROR_MESSAGE, url, err)
 			dbErrors = append(dbErrors, err)
 			continue
 		} else {
 			for _, result := range scanWrapper {
 				err := db.SaveScan(database, result)
 				if err != nil {
-					log.Printf("[SCAN API] Failed to store scan results: %v", err)
+					log.Printf(utils.STORE_SCAN_ERROR_MESSAGE, err)
 					dbErrors = append(dbErrors, err)
 				} else {
 					fileCount++
